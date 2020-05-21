@@ -1118,7 +1118,7 @@ void parse_net_options(list *options, network *net)
     net->resize_step = option_find_float_quiet(options, "resize_step", 32);
     net->attention = option_find_int_quiet(options, "attention", 0);
     net->adversarial_lr = option_find_float_quiet(options, "adversarial_lr", 0);
-    net->max_chart_loss = option_find_float_quiet(options, "max_chart_loss", 5.0);
+    net->max_chart_loss = option_find_float_quiet(options, "max_chart_loss", 20.0);
 
     net->angle = option_find_float_quiet(options, "angle", 0);
     net->aspect = option_find_float_quiet(options, "aspect", 1);
@@ -1457,9 +1457,9 @@ network parse_network_cfg_custom(char *filename, int batch, int time_steps)
 
 #ifdef GPU
         // futher GPU-memory optimization: net.optimized_memory == 2
+        l.optimized_memory = net.optimized_memory;
         if (net.optimized_memory >= 2 && params.train && l.type != DROPOUT)
         {
-            l.optimized_memory = net.optimized_memory;
             if (l.output_gpu) {
                 cuda_free(l.output_gpu);
                 //l.output_gpu = cuda_make_array_pinned(l.output, l.batch*l.outputs); // l.steps
