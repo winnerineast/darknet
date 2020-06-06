@@ -847,8 +847,12 @@ void blend_truth(float *new_truth, int boxes, float *old_truth)
 
 
 void blend_truth_mosaic(float *new_truth, int boxes, float *old_truth, int w, int h, float cut_x, float cut_y, int i_mixup,
-    int left_shift, int right_shift, int top_shift, int bot_shift)
+    int left_shift, int right_shift, int top_shift, int bot_shift,
+    int net_w, int net_h)
 {
+    const float lowest_w = 1.F / net_w;
+    const float lowest_h = 1.F / net_h;
+
     const int t_size = 4 + 1;
     int count_new_truth = 0;
     int t;
@@ -896,7 +900,7 @@ void blend_truth_mosaic(float *new_truth, int boxes, float *old_truth, int w, in
         int top = (yb - hb / 2)*h;
         int bot = (yb + hb / 2)*h;
 
-        /*
+
         {
             // fix out of Mosaic-bound
             float left_bound = 0, right_bound = 0, top_bound = 0, bot_bound = 0;
@@ -943,8 +947,8 @@ void blend_truth_mosaic(float *new_truth, int boxes, float *old_truth, int w, in
             yb = ((float)(bot + top) / 2) / h;
             hb = ((float)(bot - top)) / h;
         }
-        */
 
+        /*
         {
             // fix out of bound
             if (left < 0) {
@@ -976,11 +980,13 @@ void blend_truth_mosaic(float *new_truth, int boxes, float *old_truth, int w, in
             top = (yb - hb / 2)*h;
             bot = (yb + hb / 2)*h;
         }
+        */
 
         // leave only within the image
         if(left >= 0 && right <= w && top >= 0 && bot <= h &&
             wb > 0 && wb < 1 && hb > 0 && hb < 1 &&
-            xb > 0 && xb < 1 && yb > 0 && yb < 1)
+            xb > 0 && xb < 1 && yb > 0 && yb < 1 &&
+            wb > lowest_w && hb > lowest_h)
         {
             new_truth_ptr[0] = xb;
             new_truth_ptr[1] = yb;
@@ -1010,9 +1016,9 @@ data load_data_detection(int n, char **paths, int m, int w, int h, int c, int bo
         else use_mixup = 3;
     }
     if (use_mixup == 3 && letter_box) {
-        printf("\n Combination: letter_box=1 & mosaic=1 - isn't supported, use only 1 of these parameters \n");
-        if (check_mistakes) getchar();
-        exit(0);
+        //printf("\n Combination: letter_box=1 & mosaic=1 - isn't supported, use only 1 of these parameters \n");
+        //if (check_mistakes) getchar();
+        //exit(0);
     }
     if (random_gen() % 2 == 0) use_mixup = 0;
     int i;
@@ -1133,6 +1139,7 @@ data load_data_detection(int n, char **paths, int m, int w, int h, int c, int bo
             //printf("\n pleft = %d, pright = %d, ptop = %d, pbot = %d, ow = %d, oh = %d \n", pleft, pright, ptop, pbot, ow, oh);
 
             //float scale = rand_precalc_random(.25, 2, r_scale); // unused currently
+            //printf(" letter_box = %d \n", letter_box);
 
             if (letter_box)
             {
@@ -1160,7 +1167,6 @@ data load_data_detection(int n, char **paths, int m, int w, int h, int c, int bo
                 //printf("\n pleft = %d, pright = %d, ptop = %d, pbot = %d, ow = %d, oh = %d \n", pleft, pright, ptop, pbot, ow, oh);
             }
 
-            /*
             // move each 2nd image to the corner - so that most of it was visible
             if (use_mixup == 3 && random_gen() % 2 == 0) {
                 if (flip) {
@@ -1176,7 +1182,6 @@ data load_data_detection(int n, char **paths, int m, int w, int h, int c, int bo
                     if (i_mixup == 3) pleft += pright, pright = 0, ptop += pbot, pbot = 0;
                 }
             }
-            */
 
             int swidth = ow - pleft - pright;
             int sheight = oh - ptop - pbot;
@@ -1258,7 +1263,7 @@ data load_data_detection(int n, char **paths, int m, int w, int h, int c, int bo
                     }
                 }
 
-                blend_truth_mosaic(d.y.vals[i], boxes, truth, w, h, cut_x[i], cut_y[i], i_mixup, left_shift, right_shift, top_shift, bot_shift);
+                blend_truth_mosaic(d.y.vals[i], boxes, truth, w, h, cut_x[i], cut_y[i], i_mixup, left_shift, right_shift, top_shift, bot_shift, w, h);
 
                 free_image(ai);
                 ai.data = d.X.vals[i];
